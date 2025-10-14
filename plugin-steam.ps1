@@ -67,15 +67,21 @@ try {
     Write-Progress-Message "Baixando Arena Keys..."
     $downloadUrl = "https://github.com/ximenes98/Arena-Keys/releases/download/v1.0.1/Steam.zip"
     $zipPath = Join-Path $env:TEMP "Steam_ArenaKeys.zip"
+    $extractTemp = Join-Path $env:TEMP "Steam_ArenaKeys_Extract"
     
-    # Remover arquivo anterior se existir
+    # Remover arquivos anteriores se existirem
     if (Test-Path $zipPath) {
         Remove-Item $zipPath -Force
     }
+    if (Test-Path $extractTemp) {
+        Remove-Item $extractTemp -Recurse -Force
+    }
     
-    # Baixar arquivo (método simples e confiável)
+    # Baixar arquivo
     try {
+        $ProgressPreference = 'SilentlyContinue'
         Invoke-WebRequest -Uri $downloadUrl -OutFile $zipPath -UseBasicParsing
+        $ProgressPreference = 'Continue'
         Write-Progress-Message "Download concluído!" -Color "Yellow"
     } catch {
         throw "Falha ao baixar o arquivo: $($_.Exception.Message)"
@@ -89,18 +95,37 @@ try {
         throw "Arquivo não foi baixado corretamente."
     }
     
-    # Extrair usando Expand-Archive
+    # Extrair para pasta temporária primeiro
     try {
-        Add-Type -AssemblyName System.IO.Compression.FileSystem
-        [System.IO.Compression.ZipFile]::ExtractToDirectory($zipPath, $steamPath)
-        Write-Progress-Message "Arquivos extraídos com sucesso!" -Color "Yellow"
+        Expand-Archive -Path $zipPath -DestinationPath $extractTemp -Force
+        Write-Progress-Message "Arquivos extraídos temporariamente" -Color "Cyan"
     } catch {
-        # Fallback para método alternativo
-        $shell = New-Object -ComObject Shell.Application
-        $zip = $shell.NameSpace($zipPath)
-        $destination = $shell.NameSpace($steamPath)
-        $destination.CopyHere($zip.Items(), 4)
-        Write-Progress-Message "Arquivos extraídos com sucesso (método alternativo)!" -Color "Yellow"
+        throw "Falha ao extrair o arquivo: $($_.Exception.Message)"
+    }
+    
+    # Copiar arquivos da pasta temporária para a Steam (sobrescrevendo existentes)
+    Write-Progress-Message "Copiando arquivos para o diretório da Steam..."
+    try {
+        # Primeiro, copiar todos os arquivos e pastas diretamente
+        $extractedItems = Get-ChildItem -Path $extractTemp -Force
+        
+        foreach ($item in $extractedItems) {
+            $targetPath = Join-Path $steamPath $item.Name
+            
+            if ($item.PSIsContainer) {
+                # É uma pasta - copiar recursivamente
+                Write-Progress-Message "  Copiando pasta: $($item.Name)" -Color "Cyan"
+                Copy-Item -Path $item.FullName -Destination $steamPath -Recurse -Force
+            } else {
+                # É um arquivo - copiar e sobrescrever
+                Copy-Item -Path $item.FullName -Destination $targetPath -Force
+                Write-Progress-Message "  Copiado: $($item.Name)" -Color "DarkGray"
+            }
+        }
+        
+        Write-Progress-Message "Arquivos copiados com sucesso!" -Color "Yellow"
+    } catch {
+        throw "Falha ao copiar arquivos: $($_.Exception.Message)"
     }
     
     # Limpar arquivo temporário

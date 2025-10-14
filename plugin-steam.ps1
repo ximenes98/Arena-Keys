@@ -137,14 +137,26 @@ try {
     # Copiar arquivos da pasta temporária para a Steam (sobrescrevendo existentes)
     Write-Host "[~] Copiar para Steam" -ForegroundColor Yellow -NoNewline
     try {
-        # Primeiro, copiar todos os arquivos e pastas diretamente
-        $extractedItems = Get-ChildItem -Path $extractTemp -Force
+        # Verificar se existe uma pasta Steam dentro do ZIP extraído
+        $innerSteamFolder = Join-Path $extractTemp "Steam"
+        $sourceFolder = $extractTemp
+        
+        if (Test-Path $innerSteamFolder) {
+            # Se existe pasta Steam interna, usar ela como origem
+            $sourceFolder = $innerSteamFolder
+        }
+        
+        # Copiar todos os arquivos e pastas da origem para a raiz da Steam
+        $extractedItems = Get-ChildItem -Path $sourceFolder -Force
         
         foreach ($item in $extractedItems) {
             $targetPath = Join-Path $steamPath $item.Name
             
             if ($item.PSIsContainer) {
                 # É uma pasta - copiar recursivamente
+                if (Test-Path $targetPath) {
+                    Remove-Item $targetPath -Recurse -Force -ErrorAction SilentlyContinue
+                }
                 Copy-Item -Path $item.FullName -Destination $steamPath -Recurse -Force
             } else {
                 # É um arquivo - copiar e sobrescrever

@@ -50,6 +50,7 @@ $steamPath = (Get-ItemProperty -Path "HKCU:\Software\Valve\Steam" -ErrorAction S
 if (-not $steamPath) {
     Write-Host "${BoldRed}[!]${ResetColor} Steam não encontrado no registro."
     Write-Host "${BoldYellow}[?]${ResetColor} Por favor, certifique-se de que o Steam está instalado."
+    Read-Host "Pressione Enter para sair"
     exit 1
 }
 
@@ -63,6 +64,7 @@ try {
     
     if (-not $latestRelease) {
         Write-Host "${BoldRed}[!]${ResetColor} Nenhuma release encontrada."
+        Read-Host "Pressione Enter para sair"
         exit 1
     }
     
@@ -70,6 +72,7 @@ try {
     Write-Host "${BoldGreen}[+]${ResetColor} Versão encontrada: ${BoldYellow}$releaseTag${ResetColor}"
 } catch {
     Write-Host "${BoldRed}[!]${ResetColor} Erro ao buscar releases: $_"
+    Read-Host "Pressione Enter para sair"
     exit 1
 }
 
@@ -80,6 +83,7 @@ if (-not $targetAsset) {
     Write-Host "${BoldRed}[!]${ResetColor} Arquivo '$packageName' não encontrado na release."
     Write-Host "${BoldYellow}[?]${ResetColor} Arquivos disponíveis:"
     $latestRelease.assets | ForEach-Object { Write-Host "    - $($_.name)" }
+    Read-Host "Pressione Enter para sair"
     exit 1
 }
 
@@ -98,6 +102,7 @@ try {
     Write-Host "${BoldGreen}[+]${ResetColor} Download concluído!`n"
 } catch {
     Write-Host "${BoldRed}[!]${ResetColor} Erro ao baixar arquivo: $_"
+    Read-Host "Pressione Enter para sair"
     exit 1
 }
 
@@ -108,6 +113,7 @@ try {
     Write-Host "${BoldGreen}[+]${ResetColor} Arquivo descompactado com sucesso!`n"
 } catch {
     Write-Host "${BoldRed}[!]${ResetColor} Erro ao descompactar: $_"
+    Read-Host "Pressione Enter para sair"
     exit 1
 }
 

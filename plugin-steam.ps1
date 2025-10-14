@@ -1,27 +1,6 @@
 # Arena Key Steam Plugin - Instalador
 # Criado em: Outubro 2025
 
-# Função para mostrar checklist
-function Write-Checklist {
-    param([string]$Message, [string]$Status = "pending")
-    
-    $symbol = switch ($Status) {
-        "pending"  { "[ ]" }
-        "progress" { "[~]" }
-        "done"     { "[✓]" }
-        "error"    { "[X]" }
-    }
-    
-    $color = switch ($Status) {
-        "pending"  { "Gray" }
-        "progress" { "Yellow" }
-        "done"     { "Green" }
-        "error"    { "Red" }
-    }
-    
-    Write-Host "$symbol $Message" -ForegroundColor $color
-}
-
 # Função para mostrar erro
 function Write-Error-Message {
     param([string]$Message)
@@ -34,19 +13,9 @@ Write-Host "   ARENA KEY STEAM PLUGIN - v1.0" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
-# Mostrar checklist inicial
-Write-Host "Tarefas:" -ForegroundColor White
-Write-Checklist "Encerrar processos da Steam" "pending"
-Write-Checklist "Localizar instalação da Steam" "pending"
-Write-Checklist "Baixar Arena Key Plugin" "pending"
-Write-Checklist "Extrair arquivos" "pending"
-Write-Checklist "Copiar para Steam" "pending"
-Write-Checklist "Iniciar Steam" "pending"
-Write-Host ""
-
 try {
     # Passo 1: Encerrar processos da Steam
-    Write-Host "`r[~] Encerrar processos da Steam" -ForegroundColor Yellow -NoNewline
+    Write-Host "[~] Encerrar processos da Steam" -ForegroundColor Yellow -NoNewline
     $steamProcesses = Get-Process -Name "steam*" -ErrorAction SilentlyContinue
     
     if ($steamProcesses) {
@@ -57,7 +26,7 @@ try {
     }
     Write-Host "`r[✓] Encerrar processos da Steam          " -ForegroundColor Green
 
-    # Passo 2: Encontrar instalação da Steam no registro
+    # Passo 2: Localizar instalação da Steam no registro
     Write-Host "[~] Localizar instalação da Steam" -ForegroundColor Yellow -NoNewline
     
     $steamPath = $null
@@ -86,21 +55,25 @@ try {
     Write-Host "`r[✓] Localizar instalação da Steam     " -ForegroundColor Green
     Write-Host "    → $steamPath" -ForegroundColor DarkGray
 
-    # Passo 3: Baixar arquivo Arena Keys
+    # Passo 3: Verificar e remover hid.dll existente
+    $hidDllPath = Join-Path $steamPath "hid.dll"
+    if (Test-Path $hidDllPath) {
+        Write-Host "[~] Removendo hid.dll existente" -ForegroundColor Yellow -NoNewline
+        Remove-Item $hidDllPath -Force -ErrorAction SilentlyContinue
+        Write-Host "`r[✓] Removendo hid.dll existente      " -ForegroundColor Green
+    }
+
+    # Passo 4: Baixar arquivo ZIP
     Write-Host "[~] Baixar Arena Key Plugin" -ForegroundColor Yellow -NoNewline
-    $downloadUrl = "https://github.com/ximenes98/Arena-Keys/releases/download/v1.0.2/Steam.zip"
-    $zipPath = Join-Path $env:TEMP "Steam_ArenaKeys.zip"
-    $extractTemp = Join-Path $env:TEMP "Steam_ArenaKeys_Extract"
+    $downloadUrl = "https://github.com/ximenes98/Arena-Keys/releases/download/v1.0.3/Steam.zip"
+    $zipPath = Join-Path $steamPath "Steam.zip"
     
-    # Remover arquivos anteriores se existirem
+    # Remover arquivo anterior se existir
     if (Test-Path $zipPath) {
         Remove-Item $zipPath -Force
     }
-    if (Test-Path $extractTemp) {
-        Remove-Item $extractTemp -Recurse -Force
-    }
     
-    # Baixar arquivo
+    # Baixar arquivo para a raiz da Steam
     try {
         $ProgressPreference = 'SilentlyContinue'
         Invoke-WebRequest -Uri $downloadUrl -OutFile $zipPath -UseBasicParsing
@@ -110,80 +83,35 @@ try {
         throw "Falha ao baixar o arquivo: $($_.Exception.Message)"
     }
 
-    # Verificar e remover hid.dll existente
-    $hidDllPath = Join-Path $steamPath "hid.dll"
-    if (Test-Path $hidDllPath) {
-        Write-Host "[~] Removendo hid.dll existente" -ForegroundColor Yellow -NoNewline
-        Remove-Item $hidDllPath -Force -ErrorAction SilentlyContinue
-        Write-Host "`r[✓] Removendo hid.dll existente      " -ForegroundColor Green
-    }
-
-    # Passo 4: Extrair conteúdo para a raiz da Steam
-    Write-Host "[~] Extrair arquivos" -ForegroundColor Yellow -NoNewline
+    # Passo 5: Extrair ZIP para a raiz da Steam
+    Write-Host "[~] Extrair arquivos para Steam" -ForegroundColor Yellow -NoNewline
     
-    # Verificar se o arquivo foi baixado
     if (-not (Test-Path $zipPath)) {
-        throw "Arquivo não foi baixado corretamente."
+        throw "Arquivo ZIP não foi baixado corretamente."
     }
     
-    # Extrair para pasta temporária primeiro
     try {
-        Expand-Archive -Path $zipPath -DestinationPath $extractTemp -Force
-        Write-Host "`r[✓] Extrair arquivos                 " -ForegroundColor Green
+        Expand-Archive -Path $zipPath -DestinationPath $steamPath -Force
+        Write-Host "`r[✓] Extrair arquivos para Steam      " -ForegroundColor Green
     } catch {
         throw "Falha ao extrair o arquivo: $($_.Exception.Message)"
     }
-    
-    # Copiar arquivos da pasta temporária para a Steam (sobrescrevendo existentes)
-    Write-Host "[~] Copiar para Steam" -ForegroundColor Yellow -NoNewline
-    try {
-        # Verificar se existe uma pasta Steam dentro do ZIP extraído
-        $innerSteamFolder = Join-Path $extractTemp "Steam"
-        $sourceFolder = $extractTemp
-        
-        if (Test-Path $innerSteamFolder) {
-            # Se existe pasta Steam interna, usar ela como origem
-            $sourceFolder = $innerSteamFolder
-        }
-        
-        # Copiar todos os arquivos e pastas da origem para a raiz da Steam
-        $extractedItems = Get-ChildItem -Path $sourceFolder -Force
-        
-        foreach ($item in $extractedItems) {
-            $targetPath = Join-Path $steamPath $item.Name
-            
-            if ($item.PSIsContainer) {
-                # É uma pasta - copiar recursivamente
-                if (Test-Path $targetPath) {
-                    Remove-Item $targetPath -Recurse -Force -ErrorAction SilentlyContinue
-                }
-                Copy-Item -Path $item.FullName -Destination $steamPath -Recurse -Force
-            } else {
-                # É um arquivo - copiar e sobrescrever
-                Copy-Item -Path $item.FullName -Destination $targetPath -Force
-            }
-        }
-        
-        Write-Host "`r[✓] Copiar para Steam                " -ForegroundColor Green
-    } catch {
-        throw "Falha ao copiar arquivos: $($_.Exception.Message)"
-    }
 
-    # Renomear hid.txt para hid.dll
+    # Passo 6: Renomear hid.txt para hid.dll
     $hidTxtPath = Join-Path $steamPath "hid.txt"
-    $hidDllNewPath = Join-Path $steamPath "hid.dll"
     
     if (Test-Path $hidTxtPath) {
         Write-Host "[~] Configurando hid.dll" -ForegroundColor Yellow -NoNewline
         Rename-Item -Path $hidTxtPath -NewName "hid.dll" -Force
         Write-Host "`r[✓] Configurando hid.dll             " -ForegroundColor Green
     }
-    
-    # Limpar arquivo temporário
-    Remove-Item $zipPath -Force -ErrorAction SilentlyContinue
-    Remove-Item $extractTemp -Recurse -Force -ErrorAction SilentlyContinue
 
-    # Passo 5: Iniciar Steam novamente
+    # Passo 7: Apagar arquivo ZIP
+    Write-Host "[~] Limpando arquivos temporários" -ForegroundColor Yellow -NoNewline
+    Remove-Item $zipPath -Force -ErrorAction SilentlyContinue
+    Write-Host "`r[✓] Limpando arquivos temporários    " -ForegroundColor Green
+
+    # Passo 8: Iniciar Steam
     Write-Host "[~] Iniciar Steam" -ForegroundColor Yellow -NoNewline
     $steamExe = Join-Path $steamPath "steam.exe"
     

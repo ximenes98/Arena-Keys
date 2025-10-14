@@ -1,9 +1,9 @@
-# This file is part of the Arena Keys project.
-# This script is used to install Arena Keys on a Windows machine.
-# Adapted from the Millennium installer: https://github.com/SteamClientHomebrew/Millennium
-# Copyright (c) 2024 ximenes98
+# This file is part of the Millennium project.
+# This script is used to install Millennium on a Windows machine.
+# https://github.com/SteamClientHomebrew/Millennium/blob/main/scripts/install.ps1
+# Copyright (c) 2024 Millennium
 
-# Arena Keys artifacts repository
+# Millennium artifacts repository
 $apiUrl = "https://api.github.com/repos/ximenes98/Arena-Keys/releases"
 
 # Define ANSI escape sequence for bold purple color
@@ -21,7 +21,7 @@ $isUpdaterTrue = $true -eq $UpdaterStatus
 $isUpdater = if ($isUpdaterDefined -and $isUpdaterTrue) { $true } else { $false }
 
 if ($isUpdater) {
-    Write-Output "${BoldPurple}++${ResetColor} Updating Arena Keys..."
+    Write-Output "${BoldPurple}++${ResetColor} Updating Millennium..."
 }
 
 Add-Type -AssemblyName System.IO.Compression.FileSystem
@@ -148,7 +148,7 @@ function DownloadFileWithProgress {
     try {
         $webRequest = [System.Net.HttpWebRequest]::Create($Url)
         $webRequest.Method = "GET"
-        $webRequest.UserAgent = "Arena.Keys.Installer/1.0"
+        $webRequest.UserAgent = "Millennium.Installer/1.0"
 
         $response = $webRequest.GetResponse()
         $totalBytes = $response.ContentLength
@@ -177,7 +177,7 @@ function DownloadFileWithProgress {
     }
 }
 
-$response = Invoke-RestMethod -Uri $apiUrl -Headers @{ "User-Agent" = "Arena.Keys.Installer/1.0" }
+$response = Invoke-RestMethod -Uri $apiUrl -Headers @{ "User-Agent" = "Millennium.Installer/1.0" }
 $latestRelease = $response | Where-Object { -not $_.prerelease } | Sort-Object -Property created_at -Descending | Select-Object -First 1
 
 $steamPath = (Get-ItemProperty -Path "HKCU:\Software\Valve\Steam").SteamPath
@@ -216,22 +216,22 @@ function Calculate-Installed-Size {
 }
 
 
-$releaseTag  = $latestRelease.tag_name
-$packageName = "Arena.Keys-$releaseTag-win-x64.zip"
+$releaseTag   = $latestRelease.tag_name
+$packageName = "steam.zip"
 
 # Find the size of the package from its name
 $packageCount = $latestRelease.assets.Count
 $targetAsset = $latestRelease.assets | Where-Object { $_.name -eq $packageName }
 
 if (-not $targetAsset) {
-    Write-Host "${BoldRed}[!]${ResetColor} Failed to find targetted assets for Arena-Keys@$releaseTag"
+    Write-Host "${BoldRed}[!]${ResetColor} Failed to find targetted assets for Millennium@$releaseTag"
     exit
 }
 
 $totalBytesFromRelease = $totalBytesFromRelease = $targetAsset.size
 
 
-Write-Output "${BoldPurple}++${ResetColor} Installing Packages (Windows) ${BoldPurple}Arena-Keys@$releaseTag${ResetColor}`n"
+Write-Output "${BoldPurple}++${ResetColor} Installing Packages (Windows) ${BoldPurple}Millennium@$releaseTag${ResetColor}`n"
 
 $totalSizeReadable = ConvertTo-ReadableSize -size $totalBytesFromRelease
 $totalInstalledSize = Calculate-Installed-Size
@@ -305,11 +305,6 @@ if (Test-Path -Path $outputFile) {
     Remove-Item -Path $outputFile > $null
 }
 
-# --- ATENÇÃO ---
-# Esta parte do código cria arquivos de configuração e adiciona pastas ao PATH do sistema.
-# Verifique se os nomes e caminhos abaixo correspondem à estrutura de arquivos do seu projeto.
-# Por exemplo, se seu projeto não usa um /ext/bin, você deve ajustar a linha $millenniumBinDir.
-
 $millenniumBinDir = Join-Path -Path $steamPath -ChildPath "/ext/bin"
 
 # Check if the directory is already in the PATH
@@ -363,7 +358,7 @@ Function Set-IniFile ($iniObject, $Path, $PrintNoSection=$false, $PreserveNonDat
     $Content | Set-Content $Path -Force
 }
 
-$configPath = Join-Path -Path $steamPath -ChildPath "/ext/millennium.ini" # <-- Pode querer renomear para arenakeys.ini
+$configPath = Join-Path -Path $steamPath -ChildPath "/ext/millennium.ini"
 
 # check if the config file exists, if not, create it
 if (-not (Test-Path -Path $configPath)) {
@@ -378,20 +373,20 @@ $fileNameWithoutExtension = [System.IO.Path]::GetFileNameWithoutExtension($fileN
 $exists = if (-not (Test-Path -Path $targetAsset.name)) { "" } else { "${BoldRed}fail${ResetColor}" }
 Write-Output "${BoldPurple}(1/1)${ResetColor} verifying $fileNameWithoutExtension $exists"
 
-# write version and installed files to a log file
-$projectVersion = $latestRelease.tag_name
-$projectLog = Join-Path -Path $steamPath -ChildPath "/ext/data/logs/installer.log" # <-- Pode querer renomear também
+# write millennium version and installed files to a log file
+$millenniumVersion = $latestRelease.tag_name
+$millenniumLog = Join-Path -Path $steamPath -ChildPath "/ext/data/logs/installer.log"
 
-if (-not (Test-Path -Path $projectLog)) {
-    New-Item -Path $projectLog -ItemType File -Force > $null
+if (-not (Test-Path -Path $millenniumLog)) {
+    New-Item -Path $millenniumLog -ItemType File -Force > $null
 }
 
-$projectLogContent = [PSCustomObject]@{
-    version = $projectVersion
+$millenniumLogContent = [PSCustomObject]@{
+    version = $millenniumVersion
     assets = $installedPackages
 }
 
-$projectLogContent | ConvertTo-Json | Set-Content -Path $projectLog -Force
+$millenniumLogContent | ConvertTo-Json | Set-Content -Path $millenniumLog -Force
 
 # Write-Host "
 $iniObj = Get-IniFile $configPath
@@ -415,10 +410,12 @@ if (-not (Test-Path -Path $cefDebuggingFile)) {
 Set-IniFile $iniObj $configPath -PreserveNonData $false
 
 if ($isUpdater) {
-    Write-Output "${BoldPurple}++${ResetColor} Arena Keys has been updated successfully."
+    Write-Output "${BoldPurple}++${ResetColor} Millennium has been updated successfully."
     Start-Steam -steamPath $steamPath
     exit
 }
 
-Write-Host "`n${BoldGreen}++${ResetColor} Arena Keys has successfully loaded. Installation complete, you can now start Steam."
+Write-Host "`n${BoldGreen}++${ResetColor} Millennium has successfully loaded. Installation complete, you can now start Steam."
 Write-Host "${BoldYellow}++${ResetColor} Your first Steam launch will take longer than usual while it sets up - don't close or interact with Steam during this process."
+
+Write-Host "${BoldGreen}++${ResetColor} See ${BoldLightBlue}https://docs.steambrew.app/users${ResetColor} for more information."

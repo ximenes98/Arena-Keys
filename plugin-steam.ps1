@@ -73,19 +73,13 @@ try {
         Remove-Item $zipPath -Force
     }
     
-    # Baixar com barra de progresso
-    $webClient = New-Object System.Net.WebClient
-    $webClient.DownloadProgressChanged += {
-        param($webSender, $e)
-        $percent = [math]::Round(($e.BytesReceived / $e.TotalBytesToReceive) * 100, 2)
-        Write-Progress -Activity "Baixando Arena Keys" -Status "$percent% completo" -PercentComplete $percent
+    # Baixar arquivo (método simples e confiável)
+    try {
+        Invoke-WebRequest -Uri $downloadUrl -OutFile $zipPath -UseBasicParsing
+        Write-Progress-Message "Download concluído!" -Color "Yellow"
+    } catch {
+        throw "Falha ao baixar o arquivo: $($_.Exception.Message)"
     }
-    
-    $webClient.DownloadFileTaskAsync($downloadUrl, $zipPath).Wait()
-    $webClient.Dispose()
-    Write-Progress -Activity "Baixando Arena Keys" -Completed
-    
-    Write-Progress-Message "Download concluído!" -Color "Yellow"
 
     # Passo 4: Extrair conteúdo para a raiz da Steam
     Write-Progress-Message "Extraindo arquivos para a Steam..."

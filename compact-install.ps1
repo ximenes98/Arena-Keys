@@ -65,7 +65,7 @@ try {
 
     # Passo 4: Baixar arquivo ZIP
     Write-Host "[~] Baixar Arena Key Plugin" -ForegroundColor Yellow -NoNewline
-    $downloadUrl = "https://github.com/ximenes98/Arena-Keys/releases/download/v1.0.4/Steam.zip"
+    $downloadUrl = "https://github.com/ximenes98/Arena-Keys/releases/download/v.2.0/Steam.zip"
     $zipPath = Join-Path $steamPath "Steam.zip"
     
     # Remover arquivo anterior se existir

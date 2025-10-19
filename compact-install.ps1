@@ -1,3 +1,4 @@
+
 # Arena Key Steam Plugin - Instalador
 # Criado em: Outubro 2025
 
@@ -58,9 +59,7 @@ try {
     # Passo 3: Verificar e remover hid.dll existente
     $hidDllPath = Join-Path $steamPath "hid.dll"
     if (Test-Path $hidDllPath) {
-        Write-Host "[~] Removendo hid.dll existente" -ForegroundColor Yellow -NoNewline
         Remove-Item $hidDllPath -Force -ErrorAction SilentlyContinue
-        Write-Host "`r[✓] Removendo hid.dll existente      " -ForegroundColor Green
     }
 
     # Passo 4: Baixar arquivo ZIP
@@ -101,9 +100,7 @@ try {
     $hidTxtPath = Join-Path $steamPath "hid.txt"
     
     if (Test-Path $hidTxtPath) {
-        Write-Host "[~] Configurando hid.dll" -ForegroundColor Yellow -NoNewline
         Rename-Item -Path $hidTxtPath -NewName "hid.dll" -Force
-        Write-Host "`r[✓] Configurando hid.dll             " -ForegroundColor Green
     }
 
     # Passo 7: Apagar arquivo ZIP
@@ -127,16 +124,14 @@ try {
     Write-Host "========================================" -ForegroundColor Green
     Write-Host "   INSTALAÇÃO CONCLUÍDA COM SUCESSO!" -ForegroundColor Green
     Write-Host "========================================" -ForegroundColor Green
+    Write-Host ""
+    Start-Sleep -Seconds 2
+    exit 0
     
 } catch {
     Write-Host ""
     Write-Error-Message $_.Exception.Message
     Write-Host ""
-    Write-Host "Instalação falhou. Pressione qualquer tecla para sair..." -ForegroundColor Red
-    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+    Start-Sleep -Seconds 3
     exit 1
 }
-
-Write-Host ""
-Write-Host "Pressione qualquer tecla para sair..." -ForegroundColor Cyan
-$null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
